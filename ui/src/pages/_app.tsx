@@ -2,7 +2,7 @@ import { ChakraProvider, ColorModeProvider } from '@chakra-ui/react'
 import { Provider, createClient, dedupExchange, fetchExchange } from 'urql'
 import { cacheExchange, Cache, QueryInput } from '@urql/exchange-graphcache';
 import theme from '../theme'
-import { LoginMutation, MeDocument, MeQuery, RegisterMutation } from '../generated/graphql';
+import { LoginMutation, LogoutMutation, MeDocument, MeQuery, RegisterMutation } from '../generated/graphql';
 
 function betterUpdateQuery<Result, Query>(
   cache: Cache,
@@ -18,42 +18,53 @@ const client = createClient({
   fetchOptions: {
     credentials: "include",
   },
-  exchanges: [dedupExchange, cacheExchange({
-    updates: {
-      Mutation: {
-        login: (_result, args, cache, info) => {
-          betterUpdateQuery<LoginMutation, MeQuery>(
-            cache, 
-            {query: MeDocument},
-            _result,
-            (result, query) => {
-            if (result.login.errors) {
-              return query;
-            } else {
-              return {
-                me: result.login.user,
+  exchanges: [
+    dedupExchange,
+    cacheExchange({
+      updates: {
+        Mutation: {
+          logout: (_result, args, cache, info) => {
+            betterUpdateQuery<LogoutMutation, MeQuery>(
+              cache,
+              {query: MeDocument},
+              _result,
+              () => ({ me: null})
+            );
+          },
+          login: (_result, args, cache, info) => {
+            betterUpdateQuery<LoginMutation, MeQuery>(
+              cache, 
+              {query: MeDocument},
+              _result,
+              (result, query) => {
+              if (result.login.errors) {
+                return query;
+              } else {
+                return {
+                  me: result.login.user,
+                }
               }
-            }
-          });
-        },
-        register: (_result, args, cache, info) => {
-          betterUpdateQuery<RegisterMutation, MeQuery>(
-            cache, 
-            {query: MeDocument},
-            _result,
-            (result, query) => {
-            if (result.register.errors) {
-              return query;
-            } else {
-              return {
-                me: result.register.user,
+            });
+          },
+          register: (_result, args, cache, info) => {
+            betterUpdateQuery<RegisterMutation, MeQuery>(
+              cache, 
+              {query: MeDocument},
+              _result,
+              (result, query) => {
+              if (result.register.errors) {
+                return query;
+              } else {
+                return {
+                  me: result.register.user,
+                }
               }
-            }
-          });
+            });
+          }
         }
       }
-    }
-  }), fetchExchange],
+    }),
+    fetchExchange],
 });
 
 function MyApp({ Component, pageProps }: any) {
